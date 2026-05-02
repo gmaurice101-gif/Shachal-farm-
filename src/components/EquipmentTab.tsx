@@ -110,7 +110,7 @@ export default function EquipmentTab() {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold tracking-tight italic font-serif">Farm Equipment</h2>
-          <p className="text-sm text-gray-500">Monitor health and service cycles for Shachal Farm assets.</p>
+          <p className="text-sm text-gray-500">Monitor health and service cycles for Shachaal Farm assets.</p>
         </div>
         {profile?.role === 'manager' && (
           <button 

@@ -114,7 +114,7 @@ export default function SummaryDashboard() {
           </h1>
           <p className="text-gray-500 font-sans">
             {profile?.role === 'executive' 
-              ? "Complete performance metrics for Shachal Farm." 
+              ? "Complete performance metrics for Shachaal Farm." 
               : `Welcome back, ${profile?.displayName}. Oversight for daily operations.`}
           </p>
         </div>

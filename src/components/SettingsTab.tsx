@@ -22,6 +22,7 @@ export default function SettingsTab() {
   const [settings, setSettings] = useState<FarmSettings>({
     milkPricePerLitre: 0,
     eggPricePerUnit: 0,
+    waterPricePerUnit: 0,
     updatedAt: new Date().toISOString()
   });
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -136,6 +137,19 @@ export default function SettingsTab() {
                        value={settings.eggPricePerUnit}
                        onChange={(e) => setSettings({...settings, eggPricePerUnit: parseFloat(e.target.value) || 0})}
                        className="w-full pl-14 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl font-mono text-lg font-bold outline-none focus:ring-2 focus:ring-amber-500 transition-all"
+                    />
+                 </div>
+              </div>
+
+              <div>
+                 <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 px-1">Water Price (KSh / Unit)</label>
+                 <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-mono text-sm">KSh</span>
+                    <input 
+                       type="number" 
+                       value={settings.waterPricePerUnit}
+                       onChange={(e) => setSettings({...settings, waterPricePerUnit: parseFloat(e.target.value) || 0})}
+                       className="w-full pl-14 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl font-mono text-lg font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                     />
                  </div>
               </div>

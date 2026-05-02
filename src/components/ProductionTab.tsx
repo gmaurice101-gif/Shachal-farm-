@@ -16,6 +16,8 @@ import { db } from '../firebase';
 import { OperationType, LivestockEntry, PoultryEntry } from '../types';
 import { handleFirestoreError } from '../lib/firestoreUtils';
 
+import { isSameDay } from 'date-fns';
+
 export default function ProductionTab() {
   const { profile } = useAuth();
   const [activeSubTab, setActiveSubTab] = useState<'crop' | 'livestock' | 'poultry'>('livestock');
@@ -30,6 +32,15 @@ export default function ProductionTab() {
 
   const [recentLivestock, setRecentLivestock] = useState<LivestockEntry[]>([]);
   const [recentPoultry, setRecentPoultry] = useState<PoultryEntry[]>([]);
+
+  // Daily totals
+  const dailyMilkProduced = recentLivestock
+    .filter(l => isSameDay(new Date(l.date), new Date()))
+    .reduce((sum, l) => sum + l.milkVolume, 0);
+  
+  const dailyEggsCollected = recentPoultry
+    .filter(p => isSameDay(new Date(p.date), new Date()))
+    .reduce((sum, p) => sum + p.eggCount, 0);
 
   React.useEffect(() => {
     const qLivestock = query(collection(db, 'production_livestock'), orderBy('date', 'desc'), limit(5));
@@ -263,16 +274,33 @@ export default function ProductionTab() {
 
         {/* Sidebar Context */}
         <div className="space-y-6">
-          <div className="p-6 bg-gray-900 text-white rounded-2xl overflow-hidden relative">
+          <div className="p-6 bg-gray-900 text-white rounded-3xl overflow-hidden relative shadow-2xl shadow-gray-200">
              <div className="relative z-10">
-                <h3 className="text-sm font-medium uppercase tracking-widest text-green-400 mb-2">Manager Tip</h3>
-                <p className="text-lg font-serif">"Consistent feed timing increases milk yield by up to 15%."</p>
-                <button className="mt-6 text-xs flex items-center gap-2 group font-medium">
-                  LEARN MORE <ArrowUpRight size={14} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                </button>
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-green-400 mb-4">Daily Yield Summary</h3>
+                <div className="space-y-6">
+                   <div className="flex justify-between items-end border-b border-white/10 pb-4">
+                      <div>
+                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Today's Milk</p>
+                         <p className="text-2xl font-black font-mono text-white">{dailyMilkProduced.toLocaleString()} L</p>
+                      </div>
+                      <Milk size={20} className="text-green-500 mb-1" />
+                   </div>
+                   <div className="flex justify-between items-end">
+                      <div>
+                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Today's Eggs</p>
+                         <p className="text-2xl font-black font-mono text-white">{dailyEggsCollected.toLocaleString()} Units</p>
+                      </div>
+                      <Egg size={20} className="text-yellow-500 mb-1" />
+                   </div>
+                </div>
+                <div className="mt-8 pt-6 border-t border-white/5">
+                   <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest leading-relaxed">
+                      Real-time production monitoring for Shachaal Units.
+                   </p>
+                </div>
              </div>
-             <div className="absolute -right-8 -bottom-8 opacity-10">
-                <Milk size={120} />
+             <div className="absolute -right-8 -top-8 opacity-5">
+                <TrendingUp size={160} />
              </div>
           </div>
         </div>

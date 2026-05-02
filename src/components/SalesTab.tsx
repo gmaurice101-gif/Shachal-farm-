@@ -9,13 +9,16 @@ import {
   CheckCircle2,
   Clock,
   Plus,
-  ShoppingBag
+  ShoppingBag,
+  MessageSquare,
+  Send
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { doc, collection, query, orderBy, onSnapshot, addDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Sale, OperationType, FarmSettings } from '../types';
 import { handleFirestoreError } from '../lib/firestoreUtils';
+import axios from 'axios';
 
 export default function SalesTab() {
   const { profile } = useAuth();
@@ -27,6 +30,7 @@ export default function SalesTab() {
   // Form
   const [productType, setProductType] = useState('Milk');
   const [customer, setCustomer] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
   const [quantity, setQuantity] = useState('');
   const [totalPrice, setTotalPrice] = useState('');
   const [paymentStatus, setPaymentStatus] = useState<'paid' | 'outstanding'>('paid');
@@ -59,6 +63,8 @@ export default function SalesTab() {
       setTotalPrice((qty * settings.milkPricePerLitre).toFixed(2));
     } else if (productType === 'Eggs') {
       setTotalPrice((qty * settings.eggPricePerUnit).toFixed(2));
+    } else if (productType === 'Water') {
+      setTotalPrice((qty * (settings.waterPricePerUnit || 0)).toFixed(2));
     }
   }, [productType, quantity, settings]);
 
@@ -73,6 +79,7 @@ export default function SalesTab() {
         date: new Date().toISOString(),
         productType,
         customer,
+        customerPhone,
         quantity: parseFloat(quantity),
         totalPrice: parseFloat(totalPrice),
         paymentStatus,
@@ -81,6 +88,7 @@ export default function SalesTab() {
       });
       setIsAddingSale(false);
       setCustomer('');
+      setCustomerPhone('');
       setQuantity('');
       setTotalPrice('');
     } catch (err) {
@@ -98,13 +106,79 @@ export default function SalesTab() {
     }
   };
 
+  const handleSendBill = async (sale: Sale) => {
+    if (!sale.customerPhone) {
+      alert('No phone number provided for this customer');
+      return;
+    }
+    
+    const message = `Hello ${sale.customer}, your monthly water bill from Shachaal Farm is KSh ${sale.totalPrice}. Please pay soon. Thank you!`;
+    
+    try {
+      const response = await axios.post('/api/send-sms', {
+        phone: sale.customerPhone,
+        message: message
+      });
+      if (response.data.success) {
+        alert('Bill sent successfully via SMS!');
+      } else {
+        alert('Failed to send SMS. Check terminal for details.');
+      }
+    } catch (error: any) {
+      console.error('SMS Send Error:', error);
+      alert('Error sending SMS: ' + (error.response?.data?.error || error.message));
+    }
+  };
+
   const filteredSales = sales.filter(s => 
     s.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
     s.productType.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Group outstanding water sales by customer for monthly billing
+  const waterCustomers = sales.reduce((acc: any, s) => {
+    if (s.productType === 'Water' && s.paymentStatus === 'outstanding') {
+      if (!acc[s.customer]) {
+        acc[s.customer] = { 
+          total: 0, 
+          phone: s.customerPhone, 
+          sales: [] 
+        };
+      }
+      acc[s.customer].total += s.totalPrice;
+      acc[s.customer].sales.push(s.id);
+    }
+    return acc;
+  }, {});
+
   return (
     <div className="space-y-6">
+      {/* Water Customers Summary */}
+      {Object.keys(waterCustomers).length > 0 && (
+        <section className="p-6 bg-blue-50 border border-blue-100 rounded-2xl shadow-sm">
+           <div className="flex items-center gap-2 mb-4">
+              <MessageSquare className="text-blue-600" size={20} />
+              <h3 className="text-sm font-black text-blue-900 uppercase tracking-widest">Monthly Water Billing Summary</h3>
+           </div>
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Object.entries(waterCustomers).map(([name, data]: [string, any]) => (
+                <div key={name} className="p-4 bg-white rounded-xl border border-blue-100 flex justify-between items-center shadow-sm">
+                   <div>
+                      <p className="text-xs font-bold text-gray-900">{name}</p>
+                      <p className="text-[10px] font-black text-blue-600 font-mono">KSh {data.total.toLocaleString()}</p>
+                   </div>
+                   <button 
+                      onClick={() => handleSendBill({ customer: name, totalPrice: data.total, customerPhone: data.phone } as any)}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-bold uppercase tracking-widest hover:brightness-110 transition-all"
+                   >
+                     <Send size={12} /> Send Bill
+                   </button>
+                </div>
+              ))}
+           </div>
+        </section>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="p-6 bg-white border border-gray-100 rounded-2xl shadow-sm flex items-center gap-4">
           <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
@@ -199,18 +273,29 @@ export default function SalesTab() {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    {sale.paymentStatus === 'outstanding' && (profile?.role === 'manager' || profile?.role === 'executive') ? (
-                      <button 
-                        onClick={() => handleMarkAsPaid(sale.id)}
-                        className="px-3 py-1 bg-green-600 text-white text-[10px] font-bold uppercase tracking-widest rounded-lg shadow-sm hover:brightness-110 transition-all"
-                      >
-                        Mark Paid
-                      </button>
-                    ) : (
-                      <button className="text-gray-400 hover:text-gray-600">
-                        <MoreVertical size={18} />
-                      </button>
-                    )}
+                    <div className="flex items-center justify-end gap-2">
+                       {sale.productType === 'Water' && sale.paymentStatus === 'outstanding' && (
+                         <button 
+                           onClick={() => handleSendBill(sale)}
+                           className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-blue-100"
+                           title="Send Monthly Bill via SMS"
+                         >
+                           <Send size={14} />
+                         </button>
+                       )}
+                       {sale.paymentStatus === 'outstanding' && (profile?.role === 'manager' || profile?.role === 'executive') ? (
+                        <button 
+                          onClick={() => handleMarkAsPaid(sale.id)}
+                          className="px-3 py-1 bg-green-600 text-white text-[10px] font-bold uppercase tracking-widest rounded-lg shadow-sm hover:brightness-110 transition-all font-sans"
+                        >
+                          Mark Paid
+                        </button>
+                      ) : (
+                        <button className="text-gray-400 hover:text-gray-600">
+                          <MoreVertical size={18} />
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -255,6 +340,7 @@ export default function SalesTab() {
                     >
                       <option>Milk</option>
                       <option>Eggs</option>
+                      <option>Water</option>
                       <option>Crops</option>
                       <option>Livestock</option>
                     </select>
@@ -268,6 +354,16 @@ export default function SalesTab() {
                       onChange={(e) => setCustomer(e.target.value)}
                       className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl font-sans text-sm outline-none focus:ring-2 focus:ring-blue-500" 
                       placeholder="e.g. Local Dairy Co."
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Customer Phone (for SMS Billing)</label>
+                    <input 
+                      type="tel" 
+                      value={customerPhone}
+                      onChange={(e) => setCustomerPhone(e.target.value)}
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl font-sans text-sm outline-none focus:ring-2 focus:ring-blue-500 font-mono" 
+                      placeholder="e.g. 254700000000"
                     />
                   </div>
                   <div>

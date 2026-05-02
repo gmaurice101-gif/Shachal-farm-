@@ -21,7 +21,7 @@ export default function Login() {
         
         <div className="relative z-10 h-full p-20 flex flex-col justify-end">
            <h2 className="text-6xl font-bold font-serif text-white leading-tight italic">
-             Modernizing<br />Shachal Farm.
+             Modernizing<br />Shachaal Farm.
            </h2>
            <p className="text-green-200 mt-6 max-w-md text-lg leading-relaxed">
              A comprehensive management suite for production tracking, financial analytics, and team coordination.
@@ -39,7 +39,7 @@ export default function Login() {
             <div className="p-3 bg-green-950 text-white rounded-2xl shadow-xl shadow-green-100">
                <Tractor size={32} />
             </div>
-            <span className="text-2xl font-black italic font-serif tracking-tighter text-gray-900 uppercase">Shachal Farm</span>
+            <span className="text-2xl font-black italic font-serif tracking-tighter text-gray-900 uppercase">Shachaal Farm</span>
           </div>
 
           <div className="space-y-4">
@@ -90,7 +90,7 @@ export default function Login() {
           </div>
 
           <p className="text-center text-xs text-gray-400 pt-12 font-medium uppercase tracking-widest">
-            &copy; 2026 Shachal Farm Management System v2.4
+            &copy; 2026 Shachaal Farm Management System v2.4
           </p>
         </motion.div>
       </div>

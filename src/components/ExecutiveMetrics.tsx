@@ -70,10 +70,14 @@ export default function ExecutiveMetrics() {
 
   // Unit Specific Revenue
   const unitRevenue = sales.reduce((acc: any, s) => {
-    const unit = s.productType === 'Milk' ? 'Livestock' : s.productType === 'Eggs' ? 'Poultry' : 'Crops';
+    let unit = 'Crops';
+    if (s.productType === 'Milk') unit = 'Livestock';
+    else if (s.productType === 'Eggs') unit = 'Poultry';
+    else if (s.productType === 'Water') unit = 'Water';
+    
     acc[unit] = (acc[unit] || 0) + s.totalPrice;
     return acc;
-  }, { Livestock: 0, Poultry: 0, Crops: 0 });
+  }, { Livestock: 0, Poultry: 0, Crops: 0, Water: 0 });
 
   // Monthly Performance Data
   const getMonthlyData = () => {
@@ -327,7 +331,7 @@ export default function ExecutiveMetrics() {
                  </span>
               </div>
               <p className="text-sm text-gray-500 leading-relaxed italic">
-                "Shachal Farm continues to show strong fiscal resilience. Livestock remains the primary revenue driver, while poultry maintenance costs have decreased by 4%."
+                "Shachaal Farm continues to show strong fiscal resilience. Livestock remains the primary revenue driver, while poultry maintenance costs have decreased by 4%."
               </p>
            </div>
         </div>

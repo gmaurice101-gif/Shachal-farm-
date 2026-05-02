@@ -40,6 +40,7 @@ export interface Expense {
 export interface FarmSettings {
   milkPricePerLitre: number;
   eggPricePerUnit: number;
+  waterPricePerUnit: number;
   updatedAt: string;
 }
 
@@ -56,6 +57,7 @@ export interface Sale {
   date: string;
   productType: string;
   customer: string;
+  customerPhone?: string;
   quantity: number;
   totalPrice: number;
   paymentStatus: 'paid' | 'outstanding';

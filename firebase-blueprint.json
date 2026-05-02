@@ -2,7 +2,7 @@
   "entities": {
     "User": {
       "title": "User",
-      "description": "User profile and role inside Shachal Farm",
+      "description": "User profile and role inside Shachaal Farm",
       "type": "object",
       "properties": {
         "uid": { "type": "string" },
@@ -65,6 +65,7 @@
         "date": { "type": "string", "format": "date-time" },
         "productType": { "type": "string" },
         "customer": { "type": "string" },
+        "customerPhone": { "type": "string" },
         "quantity": { "type": "number" },
         "totalPrice": { "type": "number" },
         "paymentStatus": { "type": "string", "enum": ["paid", "outstanding"] },
@@ -93,6 +94,7 @@
       "properties": {
         "milkPricePerLitre": { "type": "number" },
         "eggPricePerUnit": { "type": "number" },
+        "waterPricePerUnit": { "type": "number" },
         "updatedAt": { "type": "string", "format": "date-time" }
       }
     },

@@ -78,7 +78,7 @@ export default function Layout() {
             <div className="p-2 bg-green-600 rounded-xl shadow-lg shadow-green-900/50">
               <Tractor size={24} className="text-white" />
             </div>
-            <span className="text-xl font-black italic font-serif leading-none tracking-tighter uppercase whitespace-nowrap">Shachal Farm</span>
+            <span className="text-xl font-black italic font-serif leading-none tracking-tighter uppercase whitespace-nowrap">Shachaal Farm</span>
           </div>
           <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden text-gray-400 hover:text-white">
             <X size={24} />
@@ -124,7 +124,7 @@ export default function Layout() {
               <LogOut size={16} /> Sign Out
             </button>
           </div>
-          <p className="text-[9px] text-center font-black uppercase tracking-widest text-gray-600">Shachal Farm OS &copy; 2026</p>
+          <p className="text-[9px] text-center font-black uppercase tracking-widest text-gray-600">Shachaal Farm OS &copy; 2026</p>
         </div>
       </aside>
 
