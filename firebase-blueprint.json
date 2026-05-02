@@ -1,0 +1,184 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and role inside Shachal Farm",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["manager", "executive", "worker"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "CropCycle": {
+      "title": "Crop Cycle",
+      "description": "Information about a specific crop planting and cultivation cycle",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "cropName": { "type": "string" },
+        "variety": { "type": "string" },
+        "plantingDate": { "type": "string", "format": "date-time" },
+        "expectedHarvestDate": { "type": "string", "format": "date-time" },
+        "landArea": { "type": "number" },
+        "status": { "type": "string", "enum": ["planned", "growing", "harvested", "failed"] },
+        "managerUid": { "type": "string" }
+      },
+      "required": ["cropName", "plantingDate", "status"]
+    },
+    "LivestockEntry": {
+      "title": "Livestock Production Entry",
+      "description": "Daily milk and feed tracking for livestock",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "cowId": { "type": "string" },
+        "milkVolume": { "type": "number" },
+        "feedConsumed": { "type": "number" },
+        "recordedBy": { "type": "string" }
+      },
+      "required": ["date", "cowId", "milkVolume", "feedConsumed"]
+    },
+    "PoultryEntry": {
+      "title": "Poultry Production Entry",
+      "description": "Daily egg collection and feed tracking for poultry",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "eggCount": { "type": "integer" },
+        "feedConsumed": { "type": "number" },
+        "recordedBy": { "type": "string" }
+      },
+      "required": ["date", "eggCount", "feedConsumed"]
+    },
+    "Sale": {
+      "title": "Sale Record",
+      "description": "Information about a product sale",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "productType": { "type": "string" },
+        "customer": { "type": "string" },
+        "quantity": { "type": "number" },
+        "totalPrice": { "type": "number" },
+        "paymentStatus": { "type": "string", "enum": ["paid", "outstanding"] },
+        "managerUid": { "type": "string" }
+      },
+      "required": ["date", "productType", "customer", "totalPrice", "paymentStatus"]
+    },
+    "Expense": {
+      "title": "Farm Expense",
+      "description": "Record of operational costs",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "category": { "type": "string", "enum": ["wages", "feed", "maintenance", "other"] },
+        "amount": { "type": "number" },
+        "description": { "type": "string" },
+        "recordedBy": { "type": "string" }
+      },
+      "required": ["date", "category", "amount"]
+    },
+    "FarmSettings": {
+      "title": "Farm Configuration",
+      "description": "Global price and operational settings",
+      "type": "object",
+      "properties": {
+        "milkPricePerLitre": { "type": "number" },
+        "eggPricePerUnit": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Equipment": {
+      "title": "Farm Equipment",
+      "description": "Asset tracking for farm machinery and tools",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string" },
+        "status": { "type": "string", "enum": ["operational", "maintenance", "broken"] },
+        "lastService": { "type": "string", "format": "date-time" },
+        "health": { "type": "number" }
+      },
+      "required": ["name", "status"]
+    },
+    "ServiceRecord": {
+      "title": "Service Record",
+      "description": "Log of maintenance performed on equipment",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "equipmentId": { "type": "string" },
+        "serviceDate": { "type": "string", "format": "date-time" },
+        "performedBy": { "type": "string" },
+        "notes": { "type": "string" }
+      },
+      "required": ["serviceDate", "performedBy"]
+    },
+    "Task": {
+      "title": "Work Task",
+      "description": "Activity assigned to a farm worker",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "assignedToUid": { "type": "string" },
+        "dueDate": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["to-do", "in-progress", "completed"] },
+        "priority": { "type": "string", "enum": ["low", "medium", "high"] }
+      },
+      "required": ["title", "assignedToUid", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Individual user profiles"
+    },
+    "/crop_cycles/{cropId}": {
+      "schema": "CropCycle",
+      "description": "Planting and harvest cycles"
+    },
+    "/production_livestock/{entryId}": {
+      "schema": "LivestockEntry",
+      "description": "Daily recording for livestock unit"
+    },
+    "/production_poultry/{entryId}": {
+      "schema": "PoultryEntry",
+      "description": "Daily recording for poultry unit"
+    },
+    "/sales/{saleId}": {
+      "schema": "Sale",
+      "description": "Sales transactions"
+    },
+    "/expenses/{expenseId}": {
+      "schema": "Expense",
+      "description": "Farm operational costs"
+    },
+    "/settings/global": {
+      "schema": "FarmSettings",
+      "description": "Global farm configuration"
+    },
+    "/equipment/{equipmentId}": {
+      "schema": "Equipment",
+      "description": "Farm assets"
+    },
+    "/equipment/{equipmentId}/service_history/{serviceId}": {
+      "schema": "ServiceRecord",
+      "description": "Maintenance history for a specific asset"
+    },
+    "/tasks/{taskId}": {
+      "schema": "Task",
+      "description": "Work assignments"
+    }
+  }
+}
