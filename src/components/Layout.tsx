@@ -12,7 +12,8 @@ import {
   Bell,
   Menu,
   X,
-  Activity
+  Activity,
+  UserRound
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import SummaryDashboard from './SummaryDashboard';
@@ -22,6 +23,7 @@ import EquipmentTab from './EquipmentTab';
 import WorkersTab from './WorkersTab';
 import ExecutiveMetrics from './ExecutiveMetrics';
 import SettingsTab from './SettingsTab';
+import ClientAccounts from './ClientAccounts';
 
 export default function Layout() {
   const { profile, logOut } = useAuth();
@@ -31,6 +33,7 @@ export default function Layout() {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['manager', 'executive', 'worker'] },
     { id: 'metrics', label: 'CEO Metrics', icon: Activity, roles: ['executive'] },
+    { id: 'clients', label: 'Client Ledger', icon: UserRound, roles: ['executive'] },
     { id: 'production', label: 'Production', icon: Sprout, roles: ['manager', 'executive', 'worker'] },
     { id: 'sales', label: 'Sales & Revenue', icon: DollarSign, roles: ['manager', 'executive'] },
     { id: 'equipment', label: 'Equipment', icon: Tractor, roles: ['manager', 'executive', 'worker'] },
@@ -44,6 +47,7 @@ export default function Layout() {
     switch (activeTab) {
       case 'dashboard': return <SummaryDashboard />;
       case 'metrics': return <ExecutiveMetrics />;
+      case 'clients': return <ClientAccounts />;
       case 'production': return <ProductionTab />;
       case 'sales': return <SalesTab />;
       case 'equipment': return <EquipmentTab />;
