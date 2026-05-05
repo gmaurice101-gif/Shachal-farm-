@@ -10,12 +10,18 @@ export interface UserProfile {
 
 export interface CropCycle {
   id: string;
-  cropName: string;
+  cropType: string;
   variety: string;
   plantingDate: string;
   expectedHarvestDate?: string;
   landArea: number;
   status: 'planned' | 'growing' | 'harvested' | 'failed';
+  fertilizerCost: number;
+  labourCost: number;
+  seedCost: number;
+  plantingCost: number;
+  harvestCost: number;
+  totalProductionCost: number;
   managerUid: string;
 }
 
@@ -41,6 +47,7 @@ export interface FarmSettings {
   milkPricePerLitre: number;
   eggPricePerUnit: number;
   waterPricePerUnit: number;
+  availableCrops: string[];
   updatedAt: string;
 }
 

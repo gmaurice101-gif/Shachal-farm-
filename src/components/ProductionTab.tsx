@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { 
   Milk, 
@@ -8,12 +8,16 @@ import {
   Save,
   ArrowUpRight,
   TrendingUp,
-  History
+  History,
+  ChevronDown,
+  ChevronUp,
+  LandPlot,
+  Coins
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { collection, addDoc, serverTimestamp, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, orderBy, limit, onSnapshot, doc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { OperationType, LivestockEntry, PoultryEntry } from '../types';
+import { OperationType, LivestockEntry, PoultryEntry, CropCycle, FarmSettings } from '../types';
 import { handleFirestoreError } from '../lib/firestoreUtils';
 
 import { isSameDay } from 'date-fns';
@@ -22,16 +26,35 @@ export default function ProductionTab() {
   const { profile } = useAuth();
   const [activeSubTab, setActiveSubTab] = useState<'crop' | 'livestock' | 'poultry'>('livestock');
   const [isLogging, setIsLogging] = useState(false);
+  const [expandedCrop, setExpandedCrop] = useState<string | null>(null);
 
-  // Form states
+  // General states
+  const [settings, setSettings] = useState<FarmSettings | null>(null);
+
+  // Livestock Form states
   const [cowId, setCowId] = useState('');
   const [milkVolume, setMilkVolume] = useState('');
   const [feedLivestock, setFeedLivestock] = useState('');
+
+  // Poultry Form states
   const [eggsCollected, setEggsCollected] = useState('');
   const [feedPoultry, setFeedPoultry] = useState('');
 
+  // Crop Form states
+  const [cropType, setCropType] = useState('Onions');
+  const [newCropType, setNewCropType] = useState('');
+  const [isAddingNewCrop, setIsAddingNewCrop] = useState(false);
+  const [variety, setVariety] = useState('');
+  const [landArea, setLandArea] = useState('');
+  const [fertilizerCost, setFertilizerCost] = useState('');
+  const [labourCost, setLabourCost] = useState('');
+  const [seedCost, setSeedCost] = useState('');
+  const [plantingCost, setPlantingCost] = useState('');
+  const [harvestCost, setHarvestCost] = useState('');
+
   const [recentLivestock, setRecentLivestock] = useState<LivestockEntry[]>([]);
   const [recentPoultry, setRecentPoultry] = useState<PoultryEntry[]>([]);
+  const [recentCrops, setRecentCrops] = useState<CropCycle[]>([]);
 
   // Daily totals
   const dailyMilkProduced = recentLivestock
@@ -42,9 +65,16 @@ export default function ProductionTab() {
     .filter(p => isSameDay(new Date(p.date), new Date()))
     .reduce((sum, p) => sum + p.eggCount, 0);
 
-  React.useEffect(() => {
+  useEffect(() => {
+    const unsubSettings = onSnapshot(doc(db, 'settings', 'global'), (doc) => {
+      if (doc.exists()) {
+        setSettings(doc.data() as FarmSettings);
+      }
+    });
+
     const qLivestock = query(collection(db, 'production_livestock'), orderBy('date', 'desc'), limit(5));
     const qPoultry = query(collection(db, 'production_poultry'), orderBy('date', 'desc'), limit(5));
+    const qCrops = query(collection(db, 'crop_cycles'), orderBy('plantingDate', 'desc'), limit(10));
 
     const unsubL = onSnapshot(qLivestock, (snapshot) => {
       setRecentLivestock(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LivestockEntry)));
@@ -54,7 +84,16 @@ export default function ProductionTab() {
       setRecentPoultry(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PoultryEntry)));
     });
 
-    return () => { unsubL(); unsubP(); };
+    const unsubC = onSnapshot(qCrops, (snapshot) => {
+      setRecentCrops(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CropCycle)));
+    });
+
+    return () => { 
+      unsubSettings();
+      unsubL(); 
+      unsubP(); 
+      unsubC();
+    };
   }, []);
 
   const handleLogLivestock = async (e: React.FormEvent) => {
@@ -96,6 +135,53 @@ export default function ProductionTab() {
       handleFirestoreError(err, OperationType.WRITE, 'production_poultry');
     }
   };
+
+  const handleLogCrop = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile) return;
+
+    const finalCropType = isAddingNewCrop ? newCropType : cropType;
+    if (!finalCropType) return;
+
+    const fCost = parseFloat(fertilizerCost) || 0;
+    const lCost = parseFloat(labourCost) || 0;
+    const sCost = parseFloat(seedCost) || 0;
+    const pCost = parseFloat(plantingCost) || 0;
+    const hCost = parseFloat(harvestCost) || 0;
+    const total = fCost + lCost + sCost + pCost + hCost;
+
+    try {
+      await addDoc(collection(db, 'crop_cycles'), {
+        cropType: finalCropType,
+        variety,
+        plantingDate: new Date().toISOString(),
+        landArea: parseFloat(landArea) || 0,
+        status: 'growing',
+        fertilizerCost: fCost,
+        labourCost: lCost,
+        seedCost: sCost,
+        plantingCost: pCost,
+        harvestCost: hCost,
+        totalProductionCost: total,
+        managerUid: profile.uid,
+        createdAt: serverTimestamp()
+      });
+
+      setVariety('');
+      setLandArea('');
+      setFertilizerCost('');
+      setLabourCost('');
+      setSeedCost('');
+      setPlantingCost('');
+      setHarvestCost('');
+      setIsLogging(false);
+      setIsAddingNewCrop(false);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, 'crop_cycles');
+    }
+  };
+
+  const availableCrops = settings?.availableCrops || ['Onions', 'Tomatoes', 'Cabbage', 'Kale (Sukuma Wiki)', 'Maize'];
 
   return (
     <div className="space-y-6">
@@ -264,10 +350,126 @@ export default function ProductionTab() {
           )}
 
           {activeSubTab === 'crop' && (
-            <div className="p-12 text-center bg-white border border-dashed border-gray-200 rounded-2xl">
-              <Sprout size={48} className="mx-auto text-gray-300 mb-4" />
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Crop Cultivation Tracking</h3>
-              <p className="text-sm text-gray-500 max-w-sm mx-auto">Manage your seasonal cycles, soil health, and harvest predictions. Module coming soon.</p>
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h3 className="text-xl font-bold font-serif italic">Crop Cultivation Tracking</h3>
+                <button 
+                  onClick={() => setIsLogging(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
+                >
+                  <Plus size={16} /> Start Cycle
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="p-6 bg-white border border-gray-100 rounded-2xl shadow-sm">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><LandPlot size={20} /></div>
+                    <span className="text-xs font-mono text-gray-400 uppercase tracking-tighter">Active Cycles</span>
+                  </div>
+                  <p className="text-2xl font-bold font-mono tracking-tighter">
+                    {recentCrops.filter(c => c.status === 'growing').length}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1 font-sans italic">Currently in field</p>
+                </div>
+                <div className="p-6 bg-white border border-gray-100 rounded-2xl shadow-sm">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><Coins size={20} /></div>
+                    <span className="text-xs font-mono text-gray-400 uppercase tracking-tighter">Total Investment</span>
+                  </div>
+                  <p className="text-2xl font-bold font-mono tracking-tighter">
+                    KSh {recentCrops.reduce((sum, c) => sum + (c.totalProductionCost || 0), 0).toLocaleString()}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1 font-sans">Last 10 records</p>
+                </div>
+              </div>
+
+              <div className="p-6 bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+                <div className="flex items-center gap-2 mb-6">
+                  <History size={18} className="text-gray-400" />
+                  <h4 className="font-bold">Recent Crop Cycles</h4>
+                </div>
+                
+                <div className="space-y-4">
+                   {recentCrops.map((crop) => (
+                     <div key={crop.id} className="border border-gray-50 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                        <div 
+                           onClick={() => setExpandedCrop(expandedCrop === crop.id ? null : crop.id)}
+                           className="p-4 bg-gray-50/50 flex items-center justify-between cursor-pointer"
+                        >
+                           <div className="flex items-center gap-4">
+                              <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+                                 <Sprout size={20} />
+                              </div>
+                              <div>
+                                 <h5 className="font-bold text-gray-900">{crop.cropType}</h5>
+                                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                    {crop.variety} • {new Date(crop.plantingDate).toLocaleDateString()}
+                                 </p>
+                              </div>
+                           </div>
+                           <div className="flex items-center gap-6">
+                              <div className="text-right">
+                                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Total Cost</p>
+                                 <p className="text-sm font-black font-mono text-gray-900">KSh {(crop.totalProductionCost || 0).toLocaleString()}</p>
+                              </div>
+                              <div className="p-1 rounded-full hover:bg-gray-200 transition-colors">
+                                 {expandedCrop === crop.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                              </div>
+                           </div>
+                        </div>
+
+                        <AnimatePresence>
+                           {expandedCrop === crop.id && (
+                             <motion.div
+                               initial={{ height: 0, opacity: 0 }}
+                               animate={{ height: 'auto', opacity: 1 }}
+                               exit={{ height: 0, opacity: 0 }}
+                               className="border-t border-gray-50 bg-white"
+                             >
+                                <div className="p-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
+                                   <div className="space-y-1">
+                                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Seed Cost</p>
+                                      <p className="text-sm font-bold font-mono">KSh {crop.seedCost?.toLocaleString() || 0}</p>
+                                   </div>
+                                   <div className="space-y-1">
+                                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Fertilizer</p>
+                                      <p className="text-sm font-bold font-mono">KSh {crop.fertilizerCost?.toLocaleString() || 0}</p>
+                                   </div>
+                                   <div className="space-y-1">
+                                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Labour</p>
+                                      <p className="text-sm font-bold font-mono">KSh {crop.labourCost?.toLocaleString() || 0}</p>
+                                   </div>
+                                   <div className="space-y-1">
+                                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Planting</p>
+                                      <p className="text-sm font-bold font-mono">KSh {crop.plantingCost?.toLocaleString() || 0}</p>
+                                   </div>
+                                   <div className="space-y-1">
+                                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Harvest</p>
+                                      <p className="text-sm font-bold font-mono">KSh {crop.harvestCost?.toLocaleString() || 0}</p>
+                                   </div>
+                                </div>
+                                <div className="px-6 py-4 bg-gray-50/30 flex justify-between items-center border-t border-gray-50">
+                                   <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-lg ${
+                                      crop.status === 'growing' ? 'bg-emerald-50 text-emerald-600' :
+                                      crop.status === 'harvested' ? 'bg-blue-50 text-blue-600' : 'bg-gray-100 text-gray-400'
+                                   }`}>
+                                      Status: {crop.status}
+                                   </span>
+                                   <span className="text-[10px] font-bold text-gray-400 italic">
+                                      Area: {crop.landArea} Acres
+                                   </span>
+                                </div>
+                             </motion.div>
+                           )}
+                        </AnimatePresence>
+                     </div>
+                   ))}
+                   {recentCrops.length === 0 && (
+                     <div className="py-12 text-center text-gray-400 italic text-sm">No crop records found.</div>
+                   )}
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -317,7 +519,10 @@ export default function ProductionTab() {
               className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden"
             >
               <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                <h3 className="text-lg font-bold">New {activeSubTab === 'livestock' ? 'Milk Log' : 'Egg collection'}</h3>
+                <h3 className="text-lg font-bold">
+                  {activeSubTab === 'livestock' ? 'Milk Log' : 
+                   activeSubTab === 'poultry' ? 'Egg Collection' : 'New Crop Cycle'}
+                </h3>
                 <button onClick={() => setIsLogging(false)} className="text-gray-400 hover:text-gray-600 group">
                   <div className="p-1 rounded bg-gray-100 group-hover:bg-gray-200">
                     <Plus size={20} className="rotate-45" />
@@ -325,8 +530,8 @@ export default function ProductionTab() {
                 </button>
               </div>
               
-              <form onSubmit={activeSubTab === 'livestock' ? handleLogLivestock : handleLogPoultry} className="p-6 space-y-4">
-                {activeSubTab === 'livestock' ? (
+              <form onSubmit={activeSubTab === 'livestock' ? handleLogLivestock : activeSubTab === 'poultry' ? handleLogPoultry : handleLogCrop} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                {activeSubTab === 'livestock' && (
                   <>
                     <div>
                       <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 focus-within:text-green-600 transition-colors">Cow ID</label>
@@ -364,7 +569,9 @@ export default function ProductionTab() {
                       />
                     </div>
                   </>
-                ) : (
+                )}
+                
+                {activeSubTab === 'poultry' && (
                   <>
                     <div>
                       <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 focus-within:text-yellow-600 transition-colors">Total Egg Count</label>
@@ -391,10 +598,149 @@ export default function ProductionTab() {
                     </div>
                   </>
                 )}
+
+                {activeSubTab === 'crop' && (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                       <div className="col-span-2">
+                          <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5">Crop Type</label>
+                          {!isAddingNewCrop ? (
+                            <div className="flex gap-2">
+                               <select 
+                                 value={cropType}
+                                 onChange={(e) => setCropType(e.target.value)}
+                                 className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                               >
+                                  {availableCrops.map(c => <option key={c} value={c}>{c}</option>)}
+                               </select>
+                               <button 
+                                 type="button"
+                                 onClick={() => setIsAddingNewCrop(true)}
+                                 className="px-3 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 text-xs font-bold uppercase"
+                               >
+                                 New
+                               </button>
+                            </div>
+                          ) : (
+                            <div className="flex gap-2">
+                               <input 
+                                 type="text"
+                                 required
+                                 value={newCropType}
+                                 onChange={(e) => setNewCropType(e.target.value)}
+                                 placeholder="Enter crop name..."
+                                 className="flex-1 px-4 py-2 border border-blue-200 bg-blue-50/30 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                               />
+                               <button 
+                                 type="button"
+                                 onClick={() => setIsAddingNewCrop(false)}
+                                 className="px-3 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-100 text-xs font-bold uppercase"
+                               >
+                                 Cancel
+                               </button>
+                            </div>
+                          )}
+                       </div>
+                       <div>
+                          <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5">Variety</label>
+                          <input 
+                            type="text" 
+                            value={variety}
+                            onChange={(e) => setVariety(e.target.value)}
+                            placeholder="e.g. Red Creole"
+                            className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500" 
+                          />
+                       </div>
+                       <div>
+                          <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5">Land Area (Acres)</label>
+                          <input 
+                            type="number" 
+                            step="0.1"
+                            value={landArea}
+                            onChange={(e) => setLandArea(e.target.value)}
+                            placeholder="e.g. 0.5"
+                            className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 font-mono" 
+                          />
+                       </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-gray-100">
+                       <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400 mb-4">Production Costs (KSh)</h4>
+                       <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                          <div>
+                             <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Seed Cost</label>
+                             <input 
+                               type="number" 
+                               value={seedCost}
+                               onChange={(e) => setSeedCost(e.target.value)}
+                               className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg font-mono text-sm outline-none focus:ring-2 focus:ring-emerald-500"
+                               placeholder="0"
+                             />
+                          </div>
+                          <div>
+                             <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Fertilizer</label>
+                             <input 
+                               type="number" 
+                               value={fertilizerCost}
+                               onChange={(e) => setFertilizerCost(e.target.value)}
+                               className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg font-mono text-sm outline-none focus:ring-2 focus:ring-emerald-500"
+                               placeholder="0"
+                             />
+                          </div>
+                          <div>
+                             <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Labour</label>
+                             <input 
+                               type="number" 
+                               value={labourCost}
+                               onChange={(e) => setLabourCost(e.target.value)}
+                               className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg font-mono text-sm outline-none focus:ring-2 focus:ring-emerald-500"
+                               placeholder="0"
+                             />
+                          </div>
+                          <div>
+                             <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Planting</label>
+                             <input 
+                               type="number" 
+                               value={plantingCost}
+                               onChange={(e) => setPlantingCost(e.target.value)}
+                               className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg font-mono text-sm outline-none focus:ring-2 focus:ring-emerald-500"
+                               placeholder="0"
+                             />
+                          </div>
+                          <div>
+                             <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Harvesting</label>
+                             <input 
+                               type="number" 
+                               value={harvestCost}
+                               onChange={(e) => setHarvestCost(e.target.value)}
+                               className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg font-mono text-sm outline-none focus:ring-2 focus:ring-emerald-500"
+                               placeholder="0"
+                             />
+                          </div>
+                          <div className="bg-emerald-50 p-2 rounded-lg flex flex-col justify-center">
+                             <p className="text-[9px] font-black text-emerald-800 uppercase mb-0.5">Total Cost</p>
+                             <p className="text-sm font-black font-mono text-emerald-900">
+                                KSh {(
+                                   (parseFloat(seedCost) || 0) + 
+                                   (parseFloat(fertilizerCost) || 0) + 
+                                   (parseFloat(labourCost) || 0) + 
+                                   (parseFloat(plantingCost) || 0) + 
+                                   (parseFloat(harvestCost) || 0)
+                                ).toLocaleString()}
+                             </p>
+                          </div>
+                       </div>
+                    </div>
+                  </>
+                )}
                 
                 <button 
                   type="submit"
-                  className={`w-full py-3 ${activeSubTab === 'livestock' ? 'bg-green-600 border-green-700' : 'bg-yellow-600 border-yellow-700'} text-white rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 mt-4 hover:brightness-110 active:scale-[0.98] transition-all`}
+                  className={`w-full py-3 ${
+                    activeSubTab === 'livestock' ? 'bg-green-600 border-green-700 shadow-green-100' : 
+                    activeSubTab === 'poultry' ? 'bg-yellow-600 border-yellow-700 shadow-yellow-100' : 
+                    'bg-emerald-600 border-emerald-700 shadow-emerald-100'
+                  } text-white rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 mt-4 hover:brightness-110 active:scale-[0.98] transition-all`}
                 >
                   <Save size={18} /> SAVE RECORD
                 </button>

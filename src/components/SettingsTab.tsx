@@ -51,16 +51,36 @@ export default function SettingsTab() {
     };
   }, []);
 
-  const handleUpdateSettings = async (e: React.FormEvent) => {
+   const handleUpdateSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await setDoc(doc(db, 'settings', 'global'), {
         ...settings,
+        availableCrops: settings.availableCrops || ['Onions', 'Tomatoes', 'Cabbage', 'Kale (Sukuma Wiki)', 'Maize'],
         updatedAt: new Date().toISOString()
       });
-      alert('Prices updated successfully!');
+      alert('Settings updated successfully!');
     } catch (err) {
       handleFirestoreError(err, OperationType.WRITE, 'settings/global');
+    }
+  };
+
+  const handleAddCropType = () => {
+    const crop = prompt('Enter new crop type:');
+    if (crop && !settings.availableCrops?.includes(crop)) {
+      setSettings({
+        ...settings,
+        availableCrops: [...(settings.availableCrops || []), crop]
+      });
+    }
+  };
+
+  const handleRemoveCropType = (crop: string) => {
+    if (confirm(`Remove ${crop} from available list?`)) {
+      setSettings({
+        ...settings,
+        availableCrops: settings.availableCrops?.filter(c => c !== crop) || []
+      });
     }
   };
 
@@ -151,6 +171,33 @@ export default function SettingsTab() {
                        onChange={(e) => setSettings({...settings, waterPricePerUnit: parseFloat(e.target.value) || 0})}
                        className="w-full pl-14 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl font-mono text-lg font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                     />
+                 </div>
+              </div>
+
+              <div className="pt-4 border-t border-gray-50">
+                 <div className="flex justify-between items-center mb-4">
+                    <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 px-1">Available Crops</label>
+                    <button 
+                       type="button"
+                       onClick={handleAddCropType}
+                       className="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:underline"
+                    >
+                       + Add Type
+                    </button>
+                 </div>
+                 <div className="flex flex-wrap gap-2">
+                    {(settings.availableCrops || ['Onions', 'Tomatoes', 'Cabbage', 'Kale (Sukuma Wiki)', 'Maize']).map((crop) => (
+                       <div key={crop} className="px-3 py-1 bg-gray-50 border border-gray-100 rounded-full flex items-center gap-2 group transition-all hover:bg-gray-100">
+                          <span className="text-xs font-bold text-gray-600">{crop}</span>
+                          <button 
+                            type="button"
+                            onClick={() => handleRemoveCropType(crop)}
+                            className="text-gray-300 hover:text-rose-500 group-hover:opacity-100 opacity-0 transition-opacity"
+                          >
+                            <Plus size={12} className="rotate-45" />
+                          </button>
+                       </div>
+                    ))}
                  </div>
               </div>
 
