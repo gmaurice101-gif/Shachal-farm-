@@ -160,8 +160,12 @@ export default function Layout() {
                 <Bell size={20} />
                 <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-green-500 rounded-full border-2 border-white"></span>
              </button>
-             <button className="p-3 bg-white border border-gray-200 rounded-2xl text-gray-400 hover:text-gray-900 transition-colors">
-                <Settings size={20} />
+             <button 
+                onClick={logOut}
+                className="p-3 bg-white border border-gray-200 rounded-2xl text-rose-500 hover:bg-rose-50 transition-colors"
+                title="Sign Out"
+             >
+                <LogOut size={20} />
              </button>
           </div>
         </header>

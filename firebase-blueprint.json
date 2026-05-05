@@ -102,6 +102,10 @@
         "eggPricePerUnit": { "type": "number" },
         "waterPricePerUnit": { "type": "number" },
         "availableCrops": { "type": "array", "items": { "type": "string" } },
+        "cropPrices": { 
+          "type": "object", 
+          "additionalProperties": { "type": "number" } 
+        },
         "updatedAt": { "type": "string", "format": "date-time" }
       }
     },

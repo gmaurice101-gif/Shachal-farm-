@@ -48,6 +48,7 @@ export interface FarmSettings {
   eggPricePerUnit: number;
   waterPricePerUnit: number;
   availableCrops: string[];
+  cropPrices?: Record<string, number>;
   updatedAt: string;
 }
 

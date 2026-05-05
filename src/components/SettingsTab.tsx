@@ -57,12 +57,24 @@ export default function SettingsTab() {
       await setDoc(doc(db, 'settings', 'global'), {
         ...settings,
         availableCrops: settings.availableCrops || ['Onions', 'Tomatoes', 'Cabbage', 'Kale (Sukuma Wiki)', 'Maize'],
+        cropPrices: settings.cropPrices || {},
         updatedAt: new Date().toISOString()
       });
       alert('Settings updated successfully!');
     } catch (err) {
       handleFirestoreError(err, OperationType.WRITE, 'settings/global');
     }
+  };
+
+  const handleUpdateCropPrice = (crop: string, price: string) => {
+    const numericPrice = parseFloat(price) || 0;
+    setSettings({
+      ...settings,
+      cropPrices: {
+        ...(settings.cropPrices || {}),
+        [crop]: numericPrice
+      }
+    });
   };
 
   const handleAddCropType = () => {
@@ -171,6 +183,27 @@ export default function SettingsTab() {
                        onChange={(e) => setSettings({...settings, waterPricePerUnit: parseFloat(e.target.value) || 0})}
                        className="w-full pl-14 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl font-mono text-lg font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                     />
+                 </div>
+              </div>
+
+              <div className="space-y-4 pt-4 border-t border-gray-50">
+                 <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 px-1 mb-2">Crop Market Pricing (per kg/unit)</label>
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {(settings.availableCrops || ['Onions', 'Tomatoes', 'Cabbage', 'Kale (Sukuma Wiki)', 'Maize']).map((crop) => (
+                       <div key={crop} className="relative">
+                          <label className="block text-[9px] font-bold text-gray-400 truncate mb-1">{crop}</label>
+                          <div className="relative">
+                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-mono text-[10px]">KSh</span>
+                             <input 
+                                type="number" 
+                                value={settings.cropPrices?.[crop] || ''}
+                                onChange={(e) => handleUpdateCropPrice(crop, e.target.value)}
+                                placeholder="0"
+                                className="w-full pl-10 pr-3 py-2 bg-gray-50 border border-gray-100 rounded-xl font-mono text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                             />
+                          </div>
+                       </div>
+                    ))}
                  </div>
               </div>
 

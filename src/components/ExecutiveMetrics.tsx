@@ -18,7 +18,7 @@ import {
 import { motion } from 'motion/react';
 import { collection, query, onSnapshot, getDocs, orderBy, limit, where, doc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Sale, LivestockEntry, PoultryEntry, Expense, FarmSettings } from '../types';
+import { Sale, LivestockEntry, PoultryEntry, Expense, FarmSettings, CropCycle } from '../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, AreaChart, Area, Cell, PieChart, Pie } from 'recharts';
 import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 
@@ -28,6 +28,7 @@ export default function ExecutiveMetrics() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [livestock, setLivestock] = useState<LivestockEntry[]>([]);
   const [poultry, setPoultry] = useState<PoultryEntry[]>([]);
+  const [crops, setCrops] = useState<CropCycle[]>([]);
   const [settings, setSettings] = useState<FarmSettings | null>(null);
   
   const [timeframe, setTimeframe] = useState<'3m' | '6m' | '12m'>('6m');
@@ -45,6 +46,9 @@ export default function ExecutiveMetrics() {
     const unsubPoultry = onSnapshot(collection(db, 'production_poultry'), (snapshot) => {
       setPoultry(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PoultryEntry)));
     });
+    const unsubCrops = onSnapshot(collection(db, 'crop_cycles'), (snapshot) => {
+      setCrops(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CropCycle)));
+    });
     const unsubSettings = onSnapshot(doc(db, 'settings', 'global'), (snapshot) => {
       if (snapshot.exists()) {
         setSettings(snapshot.data() as FarmSettings);
@@ -56,6 +60,7 @@ export default function ExecutiveMetrics() {
       unsubExpenses();
       unsubLivestock();
       unsubPoultry();
+      unsubCrops();
       unsubSettings();
     };
   }, []);
@@ -63,6 +68,16 @@ export default function ExecutiveMetrics() {
   // Financial Aggregations
   const totalRevenue = sales.reduce((acc, s) => acc + s.totalPrice, 0);
   const totalExpenses = expenses.reduce((acc, e) => acc + e.amount, 0);
+  
+  // Crop Projections
+  const projectedCropValue = crops
+    .filter(c => c.status === 'growing')
+    .reduce((acc, crop) => {
+      // If we had an expected yield field we'd use it, for now we can just show market rates or total costs
+      // Let's just track the "Projected" value if we implement sales logic later
+      return acc;
+    }, 0);
+
   const netProfit = totalRevenue - totalExpenses;
   
   // Outstanding Bills (Accounts Receivable)
